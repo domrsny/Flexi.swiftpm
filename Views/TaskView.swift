@@ -38,13 +38,18 @@ struct TaskView: View {
     @State private var showAddTaskSheet: Bool = false
     @State private var showCompletedTasks: Bool = true
     @State private var showEditTaskSheet: Bool = false
-    @State private var editingIndex: Int?
+    @State private var editingTaskIndex: Int?
     
     var body: some View {
         VStack {
-            Text("Your Tasks")
-                .font(.largeTitle)
-                .padding()
+            HStack {
+                Text("Your Tasks")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .padding()
+                Spacer()
+            }
+            .padding(.horizontal)
             // Scrollable Task List
             ScrollView {
                 VStack(spacing: 10) {
@@ -55,17 +60,22 @@ struct TaskView: View {
                                     .strikethrough(tasks[index].isCompleted)
                                 Spacer()
                                 Text(tasks[index].dueDate, style: .date)
-                                Toggle("Completed", isOn: $tasks[index].isCompleted)
+                                Toggle(isOn: $tasks[index].isCompleted) {
+                                    Label("Completed", systemImage: tasks[index].isCompleted ? "checkmark.circle" : "circle")
+                                        .labelStyle(.iconOnly)
+                                }
                                     .onChange(of: tasks[index].isCompleted) { _, _ in
                                         saveTasks(tasks)
                                     }
+                                    .toggleStyle(.button)
+                                    .dynamicTypeSize(.xxxLarge)
                             }
                             .padding()
                             .background(Color(.secondarySystemBackground))
                             .clipShape(.capsule)
                             .onTapGesture {
                                 // Set up the class for editing
-                                editingIndex = index
+                                editingTaskIndex = index
                                 newTaskTitle = tasks[index].title
                                 newTaskDueDate = tasks[index].dueDate
                                 showEditTaskSheet.toggle()
@@ -113,9 +123,11 @@ struct TaskView: View {
         }
         .sheet(isPresented: $showEditTaskSheet) {
             // Edit Task Sheet
-            EditTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate) {
+            EditTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate, onSave: {
                 editTask()
-            }
+            }, onDelete: {
+                deleteTask()
+            })
         }
     }
     // Function to add a new task
@@ -129,11 +141,21 @@ struct TaskView: View {
 
     // Function to edit an existing task
     func editTask() {
-        if let index = editingIndex {
+        if let index = editingTaskIndex {
             tasks[index].title = newTaskTitle
             tasks[index].dueDate = newTaskDueDate
             saveTasks(tasks)
-            editingIndex = nil
+            editingTaskIndex = nil
+        }
+    }
+    
+    // Function to delete the selected task
+    func deleteTask() {
+        if let index = editingTaskIndex {
+            tasks.remove(at: index)
+            saveTasks(tasks)
+            editingTaskIndex = nil
+            showEditTaskSheet = false
         }
     }
 }
@@ -163,7 +185,7 @@ struct AddTaskSheet: View {
             .padding()
             .foregroundColor(.white)
             .background(Color.blue)
-            .cornerRadius(8)
+            .clipShape(.capsule)
 
             Spacer()
         }
@@ -176,6 +198,7 @@ struct EditTaskSheet: View {
     @Binding var newTaskTitle: String
     @Binding var newTaskDueDate: Date
     let onSave: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack {
@@ -190,13 +213,27 @@ struct EditTaskSheet: View {
             DatePicker("Due Date", selection: $newTaskDueDate, displayedComponents: .date)
                 .padding()
 
-            Button("Save Changes") {
-                onSave()
+            HStack {
+                Button("Save Changes") {
+                    onSave()
+                }
+                .padding()
+                .foregroundColor(.white)
+                .background(Color.blue)
+                .clipShape(.capsule)
+                
+                Button(action: {
+                    onDelete()
+                }) {
+                    Label("Delete Task", systemImage: "trash")
+                        .font(.headline)
+                        .padding()
+                        .foregroundStyle(.white)
+                        .background(Color.blue)
+                        .clipShape(.capsule)
+                        .labelStyle(.iconOnly)
+                }
             }
-            .padding()
-            .foregroundColor(.white)
-            .background(Color.blue)
-            .cornerRadius(8)
 
             Spacer()
         }
