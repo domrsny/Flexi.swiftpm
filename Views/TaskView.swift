@@ -7,29 +7,6 @@
 
 import SwiftUI
 
-// Task model
-struct Task: Codable, Identifiable {
-    var id = UUID()
-    var title: String
-    var dueDate: Date
-    var isCompleted: Bool
-}
-
-// Save/load tasks functions
-func saveTasks(_ tasks: [Task]) {
-    if let encoded = try? JSONEncoder().encode(tasks) {
-        UserDefaults.standard.set(encoded, forKey: "tasks")
-    }
-}
-
-func loadTasks() -> [Task] {
-    if let data = UserDefaults.standard.data(forKey: "tasks"),
-        let decoded = try? JSONDecoder().decode([Task].self, from: data) {
-        return decoded
-    }
-    return []
-}
-
 // Main view for managing tasks
 struct TaskView: View {
     @State private var tasks: [Task] = loadTasks()
