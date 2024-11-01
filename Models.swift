@@ -20,7 +20,7 @@ struct Task: Identifiable, Codable {
     var title: String
     var dueDate: Date
     var isCompleted: Bool = false
-    var associatedClassID: UUID?  // Optionally links a task to a specific class
+    var assignedClassID: UUID? // Adds a classID to assign a task to a class
 }
 
 // Extend Color to support Codable

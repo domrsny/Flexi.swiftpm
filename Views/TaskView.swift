@@ -10,12 +10,15 @@ import SwiftUI
 // Main view for managing tasks
 struct TaskView: View {
     @State private var tasks: [Task] = loadTasks()
+    @State private var classes: [Class] = loadClasses()
     @State private var newTaskTitle: String = ""
     @State private var newTaskDueDate: Date = Date()
+    @State private var assignedClassID: UUID?
     @State private var showAddTaskSheet: Bool = false
     @State private var showCompletedTasks: Bool = true
     @State private var showEditTaskSheet: Bool = false
     @State private var editingTaskIndex: Int?
+    
     
     var body: some View {
         VStack {
@@ -32,8 +35,11 @@ struct TaskView: View {
                 VStack(spacing: 10) {
                     ForEach(tasks.indices, id: \.self) { index in
                         if showCompletedTasks || !tasks[index].isCompleted {
+                            let task = tasks[index]
+                            let classColor = classes.first { $0.id == task.assignedClassID}?.color ?? Color.clear
+                            
                             HStack {
-                                Text(tasks[index].title)
+                                Text(task.title)
                                     .strikethrough(tasks[index].isCompleted)
                                 Spacer()
                                 Text(tasks[index].dueDate, style: .date)
@@ -50,17 +56,22 @@ struct TaskView: View {
                             .padding()
                             .background(Color(.secondarySystemBackground))
                             .clipShape(.capsule)
+                            .overlay(
+                                Capsule()
+                                    .stroke(classColor, lineWidth: 4) // Border with class color
+                            )
                             .onTapGesture {
                                 // Set up the class for editing
                                 editingTaskIndex = index
                                 newTaskTitle = tasks[index].title
                                 newTaskDueDate = tasks[index].dueDate
+                                assignedClassID = tasks[index].assignedClassID
                                 showEditTaskSheet.toggle()
                             }
                         }
                     }
                 }
-                .padding(.horizontal)
+                .padding([.top, .leading, .trailing])
             }
             
             
@@ -94,13 +105,13 @@ struct TaskView: View {
         }
         .sheet(isPresented: $showAddTaskSheet) {
             // New Task Sheet
-            AddTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate) {
+            AddTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate, assignedClassID: $assignedClassID, classes: classes) {
                 addTask()
             }
         }
         .sheet(isPresented: $showEditTaskSheet) {
             // Edit Task Sheet
-            EditTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate, onSave: {
+            EditTaskSheet(newTaskTitle: $newTaskTitle, newTaskDueDate: $newTaskDueDate, assignedClassID: $assignedClassID, classes: classes, onSave: {
                 editTask()
             }, onDelete: {
                 deleteTask()
@@ -109,11 +120,10 @@ struct TaskView: View {
     }
     // Function to add a new task
     func addTask() {
-        let newTask = Task(title: newTaskTitle, dueDate: newTaskDueDate, isCompleted: false)
+        let newTask = Task(title: newTaskTitle, dueDate: newTaskDueDate, isCompleted: false, assignedClassID: assignedClassID)
         tasks.append(newTask)
         saveTasks(tasks)
-        newTaskTitle = ""
-        newTaskDueDate = Date()
+        resetTaskInput()
     }
 
     // Function to edit an existing task
@@ -121,8 +131,9 @@ struct TaskView: View {
         if let index = editingTaskIndex {
             tasks[index].title = newTaskTitle
             tasks[index].dueDate = newTaskDueDate
+            tasks[index].assignedClassID = assignedClassID
             saveTasks(tasks)
-            editingTaskIndex = nil
+            resetTaskInput()
         }
     }
     
@@ -131,90 +142,17 @@ struct TaskView: View {
         if let index = editingTaskIndex {
             tasks.remove(at: index)
             saveTasks(tasks)
-            editingTaskIndex = nil
-            showEditTaskSheet = false
+            resetTaskInput()
         }
     }
-}
-
-// Add task sheet
-struct AddTaskSheet: View {
-    @Binding var newTaskTitle: String
-    @Binding var newTaskDueDate: Date
-    let onSave: () -> Void
-
-    var body: some View {
-        VStack {
-            Text("Add New Task")
-                .font(.title)
-                .padding()
-
-            TextField("Task Title", text: $newTaskTitle)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-
-            DatePicker("Due Date", selection: $newTaskDueDate, displayedComponents: .date)
-                .padding()
-
-            Button("Save Task") {
-                onSave()
-            }
-            .padding()
-            .foregroundColor(.white)
-            .background(Color.blue)
-            .clipShape(.capsule)
-
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-// Edit task sheet
-struct EditTaskSheet: View {
-    @Binding var newTaskTitle: String
-    @Binding var newTaskDueDate: Date
-    let onSave: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        VStack {
-            Text("Edit Task")
-                .font(.title)
-                .padding()
-
-            TextField("Task Title", text: $newTaskTitle)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-
-            DatePicker("Due Date", selection: $newTaskDueDate, displayedComponents: .date)
-                .padding()
-
-            HStack {
-                Button("Save Changes") {
-                    onSave()
-                }
-                .padding()
-                .foregroundColor(.white)
-                .background(Color.blue)
-                .clipShape(.capsule)
-                
-                Button(action: {
-                    onDelete()
-                }) {
-                    Label("Delete Task", systemImage: "trash")
-                        .font(.headline)
-                        .padding()
-                        .foregroundStyle(.white)
-                        .background(Color.blue)
-                        .clipShape(.capsule)
-                        .labelStyle(.iconOnly)
-                }
-            }
-
-            Spacer()
-        }
-        .padding()
+    
+    func resetTaskInput() {
+        newTaskTitle = ""
+        newTaskDueDate = Date()
+        assignedClassID = nil
+        editingTaskIndex = nil
+        showAddTaskSheet = false
+        showEditTaskSheet = false
     }
 }
 
