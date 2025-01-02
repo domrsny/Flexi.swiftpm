@@ -18,6 +18,12 @@ struct TaskView: View {
     @State private var showCompletedTasks: Bool = true
     @State private var showEditTaskSheet: Bool = false
     @State private var editingTaskIndex: Int?
+    @State private var sortBy: String = "dueDate" // Default sorting by dueDate
+    @State private var sortOrderAscending: Bool = true // Default ascending order
+    
+    
+    let sortByKey = "sortByKey"
+    let sortOrderAscendingKey = "sortOrderAscendingKey" // Used for save/load purposes
     
     
     var body: some View {
@@ -73,7 +79,12 @@ struct TaskView: View {
                 }
                 .padding([.top, .leading, .trailing])
             }
-            
+            .onChange(of: sortBy) { _, _ in sortTasks() }
+            .onChange(of: sortOrderAscending) { _, _ in sortTasks() }
+            .onAppear {
+                loadSortingPreferences()
+                sortTasks()
+            }
             
             // Add Task and Show/Hide Completed buttons anchored at the bottom
             HStack {
@@ -99,7 +110,41 @@ struct TaskView: View {
                         .background(Color.blue)
                         .clipShape(.capsule)
                 }
-                .padding(.trailing)
+                // Sort By Menu
+                Menu {
+                    // Sorting Options
+                    Button(action: {
+                        sortBy = "title"
+                        sortTasks()
+                    }) {
+                        Label("Sort by Title", systemImage: "textformat")
+                    }
+                    
+                    Button(action: {
+                        sortBy = "dueDate"
+                        sortTasks()
+                    }) {
+                        Label("Sort by Due Date", systemImage: "calendar")
+                    }
+                    
+                    Divider()
+                    
+                    // Ascending/Descending Toggle
+                    Button(action: {
+                        sortOrderAscending.toggle()
+                        sortTasks()
+                    }) {
+                        Label(sortOrderAscending ? "Descending Order" : "Ascending Order", systemImage: sortOrderAscending ? "arrow.down" : "arrow.up")
+                    }
+                } label: {
+                    Label("Sort", systemImage: "arrow.up.arrow.down.circle")
+                        .font(.headline)
+                        .padding()
+                        .foregroundColor(.white)
+                        .background(Color.purple)
+                        .clipShape(.capsule)
+                }
+                
             }
             .padding([.leading, .bottom, .trailing])
         }
@@ -153,6 +198,34 @@ struct TaskView: View {
         editingTaskIndex = nil
         showAddTaskSheet = false
         showEditTaskSheet = false
+    }
+    
+    func sortTasks() {
+        switch sortBy {
+        case "title":
+            tasks.sort {
+                sortOrderAscending ? $0.title < $1.title : $0.title > $1.title
+            }
+        case "dueDate":
+            tasks.sort {
+                sortOrderAscending ? $0.dueDate < $1.dueDate : $0.dueDate > $1.dueDate
+            }
+        default:
+            break
+        }
+        saveSortingPreferences()
+    }
+    
+    func saveSortingPreferences() {
+        UserDefaults.standard.set(sortBy, forKey: sortByKey)
+        UserDefaults.standard.set(sortOrderAscending, forKey: sortOrderAscendingKey)
+    }
+
+    func loadSortingPreferences() {
+        if let savedSortBy = UserDefaults.standard.string(forKey: sortByKey) {
+            sortBy = savedSortBy
+        }
+        sortOrderAscending = UserDefaults.standard.bool(forKey: sortOrderAscendingKey)
     }
 }
 
